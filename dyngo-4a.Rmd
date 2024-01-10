@@ -1,0 +1,54 @@
+---
+title: "Dyngo-4a Treatment Split Retina"
+date: "2024-01-09"
+output:
+  html_document:
+    toc: true
+    theme: flatly 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize anti-TRPM1 autoantibodies, bringing them into their cytosol using an unknown mechanism. This experiment serves to elucidate the cellular mechanisms contributing to antibody uptake by pharmacologically inhibiting various endocytic pathways and observing the consequences on antibody uptake as seen in an *ex vivo* split mouse retina.
+
+In this project, the effect of inhibiting dynamin-dependent endocytosis is observed by treating split retinas with Dyngo-4a. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of Dyngo 4a. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
+
+Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
+
+Channel guide:
+
+  - Channel 1 = Zombie dye
+  - Channel 2 = Td tomato
+  - Channel 3 = AF-488 (uptake)
+  - Channel 4 = DIC
+
+# Data Import and Tidying
+```{r, include=FALSE}
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(here)
+source("uptake_functions.R")
+```
+
+
+## Read in the Data
+
+For each individual experiment, there is a separate excel workbook of data generated for every image. These are workbooks are placed into subfolders of the *data* directory. All workbooks from an experiment are imported into a list, then merged into a single data frame with `bind_rows`
+
+Variable names are then cleaned with `janitor` and extraneous columns are excluded (can be retrieved for different analysis later)
+
+The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2)
+```{r}
+#e1-449
+DMSO_imgs <- c("s1.2-1", "s1.2-2")
+dyngo_imgs <- c("s2.1")
+e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
+
+```
+
+
