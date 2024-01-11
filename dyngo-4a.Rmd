@@ -32,6 +32,7 @@ library(tidyverse)
 library(janitor)
 library(readxl)
 library(here)
+library(kableExtra)
 source("uptake_functions.R")
 ```
 
@@ -45,13 +46,9 @@ Variable names are then cleaned with `janitor` and extraneous columns are exclud
 The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2)
 ```{r}
 #e1-449
-DMSO_imgs <- c("s1.2-1", "s1.2-2")
-dyngo_imgs <- c("s2.1")
+DMSO_imgs <- c("s1.2-1", "s1.2-2", "s2.1","s2.3")
+dyngo_imgs <- c("s3.1", "s3.2", "s3.3", "s4.1", "s4.3")
 e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
-
-
-
-
 
 
 
@@ -88,11 +85,23 @@ all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
   })
 
 all_dyngo_exps[1]
+```
 
- all_dyngo_exps[[1]] %>%
+Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
+```{r}
+all_dyngo_exps[[1]] %>%
     group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
-    summarise()
+    summarise() %>% 
+  kbl() %>% 
+  kable_paper()
 ```
 
 
+When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
+```{r}
+all_dyngo_exps[[1]] %>% 
+  group_by(condition) %>% 
+  mutate(condition_avg = mean(tissue_avg))
+  
+```
 
