@@ -49,6 +49,50 @@ DMSO_imgs <- c("s1.2-1", "s1.2-2")
 dyngo_imgs <- c("s2.1")
 e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
+
+
+
+
+
+
+#place all experiment dataframes into a list for batch processing
+all_dyngo_exps <- list("e449" = e449)
 ```
+
+
+## Data Analysis
+
+The "mean_intensities_3" in the dataframe is an average of the signal intensity from channel 3 within a given RBC (segmented by its Td tomato reporter), so this is an individual cell average. We next need to average the signal across all cells on a given piece of tissue. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+
+<p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
+
+Begin by identifying all images that come from the same piece of tissue, using a Regex to identify this based on the sample name
+```{r}
+#regex string that will extract everything between the 's' and the '-' in the sample name
+sample_string <- "s.*?.?(?=-)"
+
+#add new variable "tissue" that uses the regex to match all images from the same piece of tissue
+all_dyngo_exps <- lapply(all_dyngo_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
+all_dyngo_exps[1]
+```
+Next, group by `tissue` and average `max_intensities_3`. Also group by `image_set` and average `max_intensities_3`
+```{r}
+all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
+  x %>%   
+    group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
+    mutate(tissue_avg = mean(max_intensities_3)) %>% 
+    ungroup() %>% 
+    group_by(image_set) %>% 
+    mutate(img_avg = mean(max_intensities_3)) %>% 
+    ungroup()
+  })
+
+all_dyngo_exps[1]
+
+ all_dyngo_exps[[1]] %>%
+    group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
+    summarise()
+```
+
 
 
