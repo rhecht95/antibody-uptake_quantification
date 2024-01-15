@@ -57,7 +57,7 @@ all_dyngo_exps <- list("e449" = e449)
 ```
 
 
-## Data Analysis
+# Data Analysis
 
 The "mean_intensities_3" in the dataframe is an average of the signal intensity from channel 3 within a given RBC (segmented by its Td tomato reporter), so this is an individual cell average. We next need to average the signal across all cells on a given piece of tissue. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
 
@@ -99,9 +99,38 @@ all_dyngo_exps[[1]] %>%
 
 When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
 ```{r}
-all_dyngo_exps[[1]] %>% 
-  group_by(condition) %>% 
-  mutate(condition_avg = mean(tissue_avg))
+all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
+  x %>%   
+    group_by(condition) %>% 
+    mutate(condition_avg = mean(tissue_avg),
+           condition_sd = sd(tissue_avg)) %>% 
+    ungroup()
+  })
+
+all_dyngo_exps[[1]]
+```
+
+# Plotting
+
+```{r}
+uptake_plot <- function(df, output_name) {
+  df %>% 
+    group_by(tissue, condition, condition_avg, tissue_avg, condition_sd) %>% #trimming the enormous data down to summary level for faster plotting
+    summarise() %>% 
+    ggplot() +
+    geom_bar(aes(x = condition, y = condition_avg),color = "black", fill = "grey", position = "dodge", stat = "identity")+
+    geom_point(aes(x = condition, y = tissue_avg), shape =  21, fill = "#D24545", alpha = 0.8, position = "jitter")+
+    geom_errorbar(aes(x = condition, ymin = condition_avg - condition_sd, ymax = condition_avg + condition_sd ), position = "dodge", width = 0.2)+
+    scale_y_continuous(expand = expansion(c(0,0.1)))+
+    theme_classic()+ 
+    theme(axis.text = element_text(color = "black"),
+          axis.ticks = element_line(color = "black"))
   
+  ggsave(filename = paste0("output/", output_name, ".pdf"), device = "pdf", dpi = 300, height = 7, width = 5, scale = 0.8)
+}
+
+uptake_plot(all_dyngo_exps[[1]], output_name = "e1-449_only")
+
+
 ```
 
