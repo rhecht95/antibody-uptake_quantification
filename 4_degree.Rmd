@@ -1,0 +1,187 @@
+---
+title: "Four Degree"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly 
+date: "2024-01-23"
+---
+
+# Introduction
+
+In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize anti-TRPM1 autoantibodies, bringing them into their cytosol using an unknown mechanism. This experiment serves as a negative control for evaluating the cellular mechanisms contributing to antibody uptake, as cold temperatures are known to inhibit all forms of endocytosis. Split retinas are equilibrated to and maintained at 37º or 4º during incubation with a PKCa antibody. The expectation is that antibody internalization is significantly reduced or absent in the 4º group compared to the 37º group.
+
+Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
+
+Channel guide:
+
+  - Channel 1 = Zombie dye
+  - Channel 2 = Td tomato
+  - Channel 3 = AF-488 (uptake)
+  - Channel 4 = DIC
+
+# Data Import and Tidying
+```{r, include=FALSE}
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(here)
+library(kableExtra)
+library(ggpubr)
+library(rstatix)
+source("uptake_functions.R")
+```
+
+## Read in the Data
+
+For each individual experiment, there is a separate excel workbook of data generated for every image. These are workbooks are placed into subfolders of the *data* directory. All workbooks from an experiment are imported into a list, then merged into a single data frame with `bind_rows`
+
+Variable names are then cleaned with `janitor` and extraneous columns are excluded (can be retrieved for different analysis later)
+
+The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e 37 ºC vs 4 ºC) to samples by the name of the sample (i.e "s1.2")
+```{r}
+#e1-450
+imgs_37 <- c("s1.2")
+imgs_4 <- c("s3.1", "s3.3", "s4.1")
+e450 <- read_n_clean(folder_path = "data/e1-450", cond1_vec = imgs_37, cond2_vec = imgs_4, cond1_title = "37 ºC", cond2_title = "4 ºC")
+
+#e1-451
+imgs_37 <- c("s1.1", "s1.2", "s1.3", "s2.1", "s2.2", "s2.3")
+imgs_4 <- c("s3.1", "s3.2", "s4.1", "s4.3")
+e451 <- read_n_clean(folder_path = "data/e1-451", cond1_vec = imgs_37, cond2_vec = imgs_4, cond1_title = "37 ºC", cond2_title = "4 ºC")
+
+#e1-452
+imgs_37 <- c("s1.2", "s1.3", "s2.1")
+imgs_4 <- c("s3.3","s4.2", "s4.3")
+e452 <- read_n_clean(folder_path = "data/e1-452", cond1_vec = imgs_37, cond2_vec = imgs_4, cond1_title = "37 ºC", cond2_title = "4 ºC")
+
+#place all experiment dataframes into a list for batch processing
+all_temp_exps <- list("e450" = e450, "e451" = e451, "e452" = e452)
+```
+
+
+# Data Analysis
+
+The "mean_intensities_3" in the dataframe is an average of the signal intensity from channel 3 within a given RBC (segmented by its Td tomato reporter), so this is an individual cell average. We next need to average the signal across all cells on a given piece of tissue. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+
+<p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
+
+Begin by identifying all images that come from the same piece of tissue, using a Regex to identify this based on the sample name
+```{r}
+#regex string that will extract everything between the 's' and the '-' in the sample name
+sample_string <- "s.*?.?(?=-)"
+
+#add new variable "tissue" that uses the regex to match all images from the same piece of tissue
+all_temp_exps <- lapply(all_temp_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
+all_temp_exps[1]
+```
+
+Next, group by `tissue` and average `mean_intensities_3`. Also group by `image_set` and average `mean_intensities_3`
+```{r}
+all_temp_exps <- lapply(all_temp_exps, function(x){
+  x %>%   
+    group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
+    mutate(tissue_avg = mean(mean_intensities_3)) %>% 
+    ungroup() %>% 
+    group_by(image_set) %>% 
+    mutate(img_avg = mean(mean_intensities_3)) %>% 
+    ungroup()
+  })
+
+all_temp_exps[1]
+```
+
+Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
+```{r}
+all_temp_exps[[2]] %>%
+    group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
+    summarise() %>% 
+  kbl() %>% 
+  kable_paper()
+```
+Merge all dataframes in list into one dataframe
+```{r}
+all_temp_exps <- bind_rows(all_temp_exps, .id = "exp") %>% 
+  mutate(exp = as.factor(exp))
+```
+
+When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
+```{r}
+all_temp_exps <- all_temp_exps %>% 
+    group_by(condition) %>% 
+    mutate(condition_avg = mean(tissue_avg),
+           condition_sd = sd(tissue_avg)) %>% 
+    ungroup()
+
+
+#all_temp_exps
+```
+
+# Statistics
+
+Data includes one continuous outcome variable (uptake signal intensity), one categorical predictor variable (treatment condition). If the data are normally distributed, then significant difference between groups can be assessed using an `independent t test (unpaired)`
+
+## Shapiro-Wilk Normality test
+
+- try performing on every individual data point: `mean_intensities_3`
+- try performing on just what goes into the plot: `tissue_avg`
+
+Histogram on points to be plotted
+```{r}
+all_temp_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>%
+  hist()
+```
+Shapiro-Wilk on points to be plotted
+```{r}
+shapiro_result <- all_temp_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>% 
+  shapiro.test()
+
+if(shapiro_result$p.value > 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are normally distributed"))
+}
+if(shapiro_result$p.value < 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are NOT normally distributed"))
+}
+
+```
+
+## Un-paired T-test
+
+Performing a Welch's t-test since this does not assume the variance in the two groups is the same.
+```{r}
+temp_t_test <- all_temp_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% #the group by and summarize lines are to filter to only the data that will be plotted and was tested in the normality test
+  ungroup() %>% 
+  t_test(tissue_avg ~ condition) %>% 
+  add_significance() %>% 
+  add_xy_position(x = "condition")
+
+temp_t_test
+```
+
+
+# Plotting
+
+```{r}
+temp_plot <- uptake_plot(all_temp_exps, output_name = "e450_e451_e452", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
+temp_plot 
+  # stat_pvalue_manual(temp_t_test)+
+  # labs(subtitle = get_test_label(temp_t_test))
+```
+Table of the plotted values
+```{r}
+all_temp_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  kbl() %>% 
+  kable_paper()
+```
+
