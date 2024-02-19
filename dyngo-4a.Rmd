@@ -34,6 +34,8 @@ library(janitor)
 library(readxl)
 library(here)
 library(kableExtra)
+library(ggpubr)
+library(rstatix)
 source("uptake_functions.R")
 ```
 
@@ -51,10 +53,14 @@ DMSO_imgs <- c("s1.2-1", "s1.2-2", "s2.1","s2.3")
 dyngo_imgs <- c("s3.1", "s3.2", "s3.3", "s4.1", "s4.3")
 e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
+#e1-455
+DMSO_imgs <- c("s1.1", "s1.3", "s2.1")
+dyngo_imgs <- c("s3.2", "s4.1")
+e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
 
 #place all experiment dataframes into a list for batch processing
-all_dyngo_exps <- list("e449" = e449)
+all_dyngo_exps <- list("e449" = e449, "e455" = e455)
 ```
 
 
@@ -114,9 +120,70 @@ all_dyngo_exps <- all_dyngo_exps %>%
 #all_dyngo_exps
 ```
 
-# Plotting
+# Statistics
 
+Data includes one continuous outcome variable (uptake signal intensity), one categorical predictor variable (treatment condition). If the data are normally distributed, then significant difference between groups can be assessed using an `independent t test (unpaired)`
+
+## Shapiro-Wilk Normality test
+
+- try performing on every individual data point: `mean_intensities_3`
+- try performing on just what goes into the plot: `tissue_avg`
+
+Histogram on points to be plotted
 ```{r}
-uptake_plot(all_dyngo_exps, output_name = "e1-449_pipeline-V4", condition_label = "Condition")
+all_dyngo_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>%
+  hist()
+```
+Shapiro-Wilk on points to be plotted
+```{r}
+shapiro_result <- all_dyngo_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>% 
+  shapiro.test()
+
+if(shapiro_result$p.value > 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are normally distributed"))
+}
+if(shapiro_result$p.value < 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are NOT normally distributed"))
+}
+
 ```
 
+## Un-paired T-test
+
+Performing a Welch's t-test since this does not assume the variance in the two groups is the same.
+```{r}
+dyngo_t_test <- all_dyngo_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% #the group by and summarize lines are to filter to only the data that will be plotted and was tested in the normality test
+  ungroup() %>% 
+  t_test(tissue_avg ~ condition) %>% 
+  add_significance() %>% 
+  add_xy_position(x = "condition")
+
+dyngo_t_test
+```
+
+# Plotting
+
+```{r, fig.height=7, fig.width=6}
+dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V4.1", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
+dyngo_plot
+```
+Table of the plotted values
+```{r}
+all_dyngo_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  kbl() %>% 
+  kable_paper()
+```
+
+The point at tissue_avg == 2.9 is from s3.2 in e455. In my notes I said I was skeptical of this piece of tissue because uptake signal was completely absent, which is something I had not seen before. 
+
+The s1.2 from e1-449 is very high signal compared to all the rest. Looking at my notes from this piece, I mention intense coverslip reflections... I think that could be thowing off the quantification 

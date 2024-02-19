@@ -34,7 +34,7 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
     group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>% #trimming the enormous data down to summary level for faster plotting
     summarise() %>%
     ggplot() +
-    geom_bar(aes(x = condition, y = condition_avg),color = "black", fill = "grey", position = "dodge", stat = "identity")+
+    geom_bar(aes(x = condition, y = condition_avg),color = "black", fill = "white", position = "dodge", stat = "identity")+
     geom_point(aes(x = condition, y = tissue_avg, fill = exp), shape =  21, alpha = 0.75, position = position_jitter(width = 0.1))+
     geom_errorbar(aes(x = condition, ymin = condition_avg + condition_sd, ymax = condition_avg + condition_sd ), position = "dodge", width = 0.2)+
     geom_linerange(aes(x = condition, ymin = condition_avg, ymax = condition_avg + condition_sd))+ #this is a trick to get a 'one-sided' error bar on a bar plot

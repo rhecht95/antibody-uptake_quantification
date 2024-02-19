@@ -95,9 +95,9 @@ all_temp_exps[1]
 Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
 ```{r}
 all_temp_exps[[2]] %>%
-    group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
-    summarise() %>% 
-  kbl() %>% 
+  group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
+  summarise() %>% 
+  kbl() %>%
   kable_paper()
 ```
 Merge all dataframes in list into one dataframe
@@ -170,11 +170,9 @@ temp_t_test
 
 # Plotting
 
-```{r}
-temp_plot <- uptake_plot(all_temp_exps, output_name = "e450_e451_e452", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
+```{r, fig.height=7, fig.width=6}
+temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V4.1", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
 temp_plot 
-  # stat_pvalue_manual(temp_t_test)+
-  # labs(subtitle = get_test_label(temp_t_test))
 ```
 Table of the plotted values
 ```{r}
