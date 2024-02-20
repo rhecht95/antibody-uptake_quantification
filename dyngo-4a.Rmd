@@ -172,7 +172,7 @@ dyngo_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V4.1", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
+dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V5", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
 dyngo_plot
 ```
 Table of the plotted values
