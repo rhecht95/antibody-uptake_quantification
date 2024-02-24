@@ -14,6 +14,8 @@ In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
 
+This document has been updated to analyze data procesed by Arivis pipeline:  "Ab-uptake_split-retina_V5.1.pipeline"
+
 Channel guide:
 
   - Channel 1 = Zombie dye
@@ -76,8 +78,54 @@ sample_string <- "s.*?.?(?=-)"
 all_temp_exps <- lapply(all_temp_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
 all_temp_exps[1]
 ```
+## Calculate the average uptake per ON-BC (`avg_upc`)
 
-Next, group by `tissue` and average `mean_intensities_3`. Also group by `image_set` and average `mean_intensities_3`
+Take `sum_intensities_3`, which represents the total amount of 488/uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+
+- total number of ON-BCs can be found by counting rows with ON-BCs in the name
+
+```{r}
+test_df <- as.data.frame(all_temp_exps[[1]])
+
+test_df <- test_df %>% 
+  mutate(name = str_extract(name, "\\([^)]+\\)")) %>% # simplify the name and remove the 'segment' information
+  rename(type = name) # rename name to 'type'
+
+#get a vector composed of the sum_intensities_3 from each image
+sum_intensities <- test_df %>% 
+  group_by(image_set) %>% 
+  filter(str_detect(type, "Real uptake")) %>% 
+  pull(sum_intensities_3)
+
+#get a vector of the count of ON-BCs per image
+num_on_bcs <- test_df %>% 
+  group_by(image_set) %>% 
+  filter(str_detect(type, "ON-BCs")) %>% 
+  count() %>% 
+  pull(n)
+  
+#condense df into groups based on image_set and condition
+test_df <- test_df %>% 
+  group_by(image_set, tissue, condition) %>% 
+  summarise()
+
+#add the new variables to the df
+test_df['sum_intensities'] <- sum_intensities #add the sum_intensities vector to the dataframe
+test_df['on_bc_count'] <- num_on_bcs #add the number of ON-BCs in the image to the df
+
+#calculate uptake per cell `avg_upc`
+test_df <- test_df %>% 
+  mutate(avg_upc = sum_intensities/on_bc_count)
+
+test_df
+
+
+```
+
+
+
+## Averaging across tissue
+Next, group by `tissue` and average `sum_intensities_3`. Also group by `image_set` and average `mean_intensities_3`
 ```{r}
 all_temp_exps <- lapply(all_temp_exps, function(x){
   x %>%   
