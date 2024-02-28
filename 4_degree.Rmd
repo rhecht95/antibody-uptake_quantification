@@ -188,19 +188,18 @@ all_temp_exps %>%
   kable_paper()
 ```
 
-Seems that using the V5 pipeline, there is no differnce between the treatment conditions anymore... This is suspicious. When I glance at the number of ON-BCs in each image, it appears more variable than it should be. Let's take a look:
+Seems that using the V5 pipeline, there is no difference between the treatment conditions anymore... This is suspicious. When I glance at the number of ON-BCs in each image, it appears more variable than it should be. Let's take a look:
 ```{r}
 all_temp_exps %>% 
-  ggplot(aes(x = image_set, y = mean_inten))+
+  ggplot(aes(x = image_set, y = sum_intensities))+
   geom_col()+
   facet_wrap(vars(condition), scales = "free_x")+
   theme_classic()+
   scale_y_continuous(expand = expansion(c(0,0.1)))+
-  labs(x = "Image", y = "ON-BCs per image")+
+  labs(x = "Image")+
   theme(axis.text = element_text(color = "black"),
         axis.ticks = element_line(color = "black"),
-        axis.text.x = element_text(angle = 90)
-        )
+        axis.text.x = element_text(angle = 90))
 
 ```
 With the exception of a few images, the number of ON-BCs is actually relatively consistent and does not appear to vary across condition
