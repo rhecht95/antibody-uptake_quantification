@@ -33,6 +33,8 @@ library(rstatix)
 source("uptake_functions.R")
 ```
 
+**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4
+
 ## Read in the Data
 
 For each individual experiment, there is a separate excel workbook of data generated for every image. These are workbooks are placed into subfolders of the *data* directory. All workbooks from an experiment are imported into a list, then merged into a single data frame with `bind_rows`
@@ -171,7 +173,7 @@ temp_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V5", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
+temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V4.1", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
 temp_plot 
 ```
 Table of the plotted values
@@ -181,5 +183,13 @@ all_temp_exps %>%
   summarise() %>% 
   kbl() %>% 
   kable_paper()
+```
+
+## Exploring data further
+```{r}
+all_temp_exps %>% 
+  ggplot()+
+  geom_point(aes(x = exp, y = tissue_avg, color = condition), alpha = 0.7)+
+  theme_classic()
 ```
 
