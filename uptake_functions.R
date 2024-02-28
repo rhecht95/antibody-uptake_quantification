@@ -39,7 +39,7 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
     geom_errorbar(aes(x = condition, ymin = condition_avg + condition_sd, ymax = condition_avg + condition_sd ), position = "dodge", width = 0.2)+
     geom_linerange(aes(x = condition, ymin = condition_avg, ymax = condition_avg + condition_sd))+ #this is a trick to get a 'one-sided' error bar on a bar plot
     scale_y_continuous(expand = expansion(c(0,0.1)))+
-    labs(x = condition_label, y = "Mean Fluorescent Intensity", fill = "Experiment")+
+    labs(x = condition_label, y = "Average Uptake/Cell", fill = "Experiment")+
     theme_classic()+
     theme(axis.text = element_text(color = "black"),
           axis.ticks = element_line(color = "black"))
@@ -53,4 +53,39 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
   df_plot
   ggsave(filename = paste0("output/", output_name, ".pdf"), device = "pdf", dpi = 300, height = 7, width = 6, scale = 0.6)
   df_plot
+}
+
+# Calculate the average uptake per cell. Applicable on and after the V5 pipeline. Return summary data from the original dataframes
+avg_uptake <- function(df){
+  df <- df %>%
+    mutate(name = str_extract(name, "\\([^)]+\\)")) %>% # simplify the name and remove the 'segment' information
+    rename(type = name) # rename name to 'type'
+
+  #get a vector composed of the sum_intensities_3 from each image
+  sum_intensities <- df %>%
+    group_by(image_set) %>%
+    filter(str_detect(type, "Real uptake")) %>%
+    pull(sum_intensities_3)
+
+  #get a vector of the count of ON-BCs per image
+  num_on_bcs <- df %>%
+    group_by(image_set) %>%
+    filter(str_detect(type, "ON-BCs")) %>%
+    count() %>%
+    pull(n)
+
+  #condense df into groups based on image_set and condition
+  df <- df %>%
+    group_by(image_set, tissue, condition) %>%
+    summarise()
+
+  #add the new variables to the df
+  df['sum_intensities'] <- sum_intensities #add the sum_intensities vector to the dataframe
+  df['on_bc_count'] <- num_on_bcs #add the number of ON-BCs in the image to the df
+
+  #calculate uptake per cell `avg_upc`
+  df <- df %>%
+    mutate(avg_upc = sum_intensities/on_bc_count)
+
+  df
 }

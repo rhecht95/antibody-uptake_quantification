@@ -85,43 +85,8 @@ Take `sum_intensities_3`, which represents the total amount of 488/uptake signal
 - total number of ON-BCs can be found by counting rows with ON-BCs in the name
 
 ```{r}
-test_df <- as.data.frame(all_temp_exps[[1]])
-
-test_df <- test_df %>% 
-  mutate(name = str_extract(name, "\\([^)]+\\)")) %>% # simplify the name and remove the 'segment' information
-  rename(type = name) # rename name to 'type'
-
-#get a vector composed of the sum_intensities_3 from each image
-sum_intensities <- test_df %>% 
-  group_by(image_set) %>% 
-  filter(str_detect(type, "Real uptake")) %>% 
-  pull(sum_intensities_3)
-
-#get a vector of the count of ON-BCs per image
-num_on_bcs <- test_df %>% 
-  group_by(image_set) %>% 
-  filter(str_detect(type, "ON-BCs")) %>% 
-  count() %>% 
-  pull(n)
-  
-#condense df into groups based on image_set and condition
-test_df <- test_df %>% 
-  group_by(image_set, tissue, condition) %>% 
-  summarise()
-
-#add the new variables to the df
-test_df['sum_intensities'] <- sum_intensities #add the sum_intensities vector to the dataframe
-test_df['on_bc_count'] <- num_on_bcs #add the number of ON-BCs in the image to the df
-
-#calculate uptake per cell `avg_upc`
-test_df <- test_df %>% 
-  mutate(avg_upc = sum_intensities/on_bc_count)
-
-test_df
-
-
+all_temp_exps <- lapply(all_temp_exps, avg_uptake)
 ```
-
 
 
 ## Averaging across tissue
@@ -130,20 +95,15 @@ Next, group by `tissue` and average `sum_intensities_3`. Also group by `image_se
 all_temp_exps <- lapply(all_temp_exps, function(x){
   x %>%   
     group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(mean_intensities_3)) %>% 
-    ungroup() %>% 
-    group_by(image_set) %>% 
-    mutate(img_avg = mean(mean_intensities_3)) %>% 
+    mutate(tissue_avg = mean(avg_upc)) %>% 
     ungroup()
   })
-
-all_temp_exps[1]
 ```
 
 Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
 ```{r}
 all_temp_exps[[2]] %>%
-  group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
+  group_by(image_set, tissue, condition, avg_upc, tissue_avg) %>% 
   summarise() %>% 
   kbl() %>%
   kable_paper()
@@ -161,9 +121,6 @@ all_temp_exps <- all_temp_exps %>%
     mutate(condition_avg = mean(tissue_avg),
            condition_sd = sd(tissue_avg)) %>% 
     ungroup()
-
-
-#all_temp_exps
 ```
 
 # Statistics
@@ -230,4 +187,36 @@ all_temp_exps %>%
   kbl() %>% 
   kable_paper()
 ```
+
+Seems that using the V5 pipeline, there is no differnce between the treatment conditions anymore... This is suspicious. When I glance at the number of ON-BCs in each image, it appears more variable than it should be. Let's take a look:
+```{r}
+all_temp_exps %>% 
+  ggplot(aes(x = image_set, y = mean_inten))+
+  geom_col()+
+  facet_wrap(vars(condition), scales = "free_x")+
+  theme_classic()+
+  scale_y_continuous(expand = expansion(c(0,0.1)))+
+  labs(x = "Image", y = "ON-BCs per image")+
+  theme(axis.text = element_text(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        axis.text.x = element_text(angle = 90)
+        )
+
+```
+With the exception of a few images, the number of ON-BCs is actually relatively consistent and does not appear to vary across condition
+The number of cells per image is surprisingly high, but as long as it is uniformly high it will not make any difference
+
+Analyzing the change in `avg_upc` across experiments
+```{r}
+all_temp_exps %>% 
+  ggplot()+
+  geom_point(aes(x = exp, y = avg_upc, color = condition), alpha = 0.7)+
+  theme_classic()
+```
+This is showing a few interesting things:
+
+- e452 looks lower on average across conditions
+- the 37 ºC group is not clearly higher than the 4º group
+
+I think there is something wrong with this analysis pipeline. Speaking with Danny, he made an interesting point. I switched to this sum_intensities strategy because I was worried that not enough important signal in the ON-BC dendrites was being captured by the segmentation volumes. However, even if they aren't capturing all of the signal, maybe it is important for filtering out noise elsewhere in the image. Maybe there is too much noise outside of the ON-BCs volumes that is causing the conditions to appear equal.
 
