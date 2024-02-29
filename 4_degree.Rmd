@@ -33,7 +33,7 @@ library(rstatix)
 source("uptake_functions.R")
 ```
 
-**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4
+**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4.1
 
 ## Read in the Data
 
