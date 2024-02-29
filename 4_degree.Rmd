@@ -193,3 +193,15 @@ all_temp_exps %>%
   theme_classic()
 ```
 
+```{r}
+all_temp_exps %>% 
+  group_by(image_set) %>% 
+  mutate(avg_sum_intens = mean(sum_intensities_3)) %>% 
+  ungroup() %>% 
+  summarise(exp, image_set, tissue, condition, avg_sum_intens) %>% 
+  unique() %>% 
+  ggplot(aes(x = condition, y = avg_sum_intens))+
+  geom_jitter(aes(color = exp, shape = condition), width = 0.1)+
+  theme_classic2()
+```
+

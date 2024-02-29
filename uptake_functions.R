@@ -23,7 +23,7 @@ read_n_clean <- function(folder_path, ...){
   df_list <- lapply(files, read_excel) #perform read_excel on each file
   df <- bind_rows(df_list) %>% #merge the lists into single df
     clean_names(replace=janitor:::mu_to_u) %>%
-    select(-c(seq(3,10), seq(15,18))) %>%  #get rid of unnecessary columns for now
+    #select(-c(seq(3,10), seq(15,18))) %>%  #get rid of unnecessary columns for now
     condition_select(...)
   df
 }
