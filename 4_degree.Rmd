@@ -186,6 +186,7 @@ all_temp_exps %>%
 ```
 
 ## Exploring data further
+Plotting tissue average by condition and experiment number
 ```{r}
 all_temp_exps %>% 
   ggplot()+
@@ -193,6 +194,7 @@ all_temp_exps %>%
   theme_classic()
 ```
 
+Alternative approach to quantifying... take the average of the summed pixel intensities within ON-BC volumes
 ```{r}
 all_temp_exps %>% 
   group_by(image_set) %>% 
