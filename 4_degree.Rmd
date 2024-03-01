@@ -103,11 +103,12 @@ all_temp_exps <- lapply(all_temp_exps, function(x){
 Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
 ```{r}
 all_temp_exps[[2]] %>%
-  group_by(image_set, tissue, condition, avg_upc, tissue_avg) %>% 
+  group_by(image_set, tissue, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
   summarise() %>% 
   kbl() %>%
   kable_paper()
 ```
+
 Merge all dataframes in list into one dataframe
 ```{r}
 all_temp_exps <- bind_rows(all_temp_exps, .id = "exp") %>% 
@@ -121,6 +122,18 @@ all_temp_exps <- all_temp_exps %>%
     mutate(condition_avg = mean(tissue_avg),
            condition_sd = sd(tissue_avg)) %>% 
     ungroup()
+```
+
+Troubleshooting avg_upc calculation
+```{r}
+all_temp_exps %>% 
+  group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  filter(exp == "e451" & tissue == "s1.2") %>% 
+  ggplot()+
+  geom_col(aes(x = image_set, y = sum_intensities/sum_intensities[1]), fill = "blue")
+  #geom_col(aes(x = image_set, y = avg_upc/avg_upc[1]), fill = "orange")
+  #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
 ```
 
 # Statistics
