@@ -33,7 +33,7 @@ library(rstatix)
 source("uptake_functions.R")
 ```
 
-**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4
+**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4.1
 
 ## Read in the Data
 
@@ -84,10 +84,10 @@ Next, group by `tissue` and average `mean_intensities_3`. Also group by `image_s
 all_temp_exps <- lapply(all_temp_exps, function(x){
   x %>%   
     group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(mean_intensities_3)) %>% 
+    mutate(tissue_avg = mean(sum_intensities_3/volume_volume_um3)) %>% 
     ungroup() %>% 
     group_by(image_set) %>% 
-    mutate(img_avg = mean(mean_intensities_3)) %>% 
+    mutate(img_avg = mean(sum_intensities_3/volume_volume_um3)) %>% 
     ungroup()
   })
 
@@ -110,14 +110,21 @@ all_temp_exps <- bind_rows(all_temp_exps, .id = "exp") %>%
 
 When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
 ```{r}
+std.error <- function(x) sd(x)/sqrt(length(x))
+
 all_temp_exps <- all_temp_exps %>% 
     group_by(condition) %>% 
     mutate(condition_avg = mean(tissue_avg),
-           condition_sd = sd(tissue_avg)) %>% 
+           condition_sd = sd(tissue_avg),
+           condition_sem = std.error(tissue_avg)) %>%
     ungroup()
 
-
-#all_temp_exps
+# std.error is being calculated incorrectly above. The real result should be this
+all_temp_exps %>% 
+  filter(condition == "4 ºC") %>% 
+  pull(tissue_avg) %>% 
+  unique() %>% 
+  std.error()
 ```
 
 # Statistics
@@ -173,13 +180,13 @@ temp_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V4.1", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
+temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V4.1_sums_se", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
 temp_plot 
 ```
 Table of the plotted values
 ```{r}
 all_temp_exps %>% 
-  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd,condition_sem, exp) %>%
   summarise() %>% 
   kbl() %>% 
   kable_paper()
