@@ -14,7 +14,7 @@ In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
 
-This document has been updated to analyze data procesed by Arivis pipeline:  "Ab-uptake_split-retina_V5.1.pipeline"
+This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
 
 Channel guide:
 
@@ -34,6 +34,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
+
 
 ## Read in the Data
 
@@ -80,9 +81,10 @@ all_temp_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-Take `sum_intensities_3`, which represents the total amount of 488/uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
 
 - total number of ON-BCs can be found by counting rows with ON-BCs in the name
+- as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
 
 ```{r}
 all_temp_exps <- lapply(all_temp_exps, avg_uptake)
@@ -90,7 +92,7 @@ all_temp_exps <- lapply(all_temp_exps, avg_uptake)
 
 
 ## Averaging across tissue
-Next, group by `tissue` and average `sum_intensities_3`. Also group by `image_set` and average `mean_intensities_3`
+Next, group by `tissue` and average `avg_upc`
 ```{r}
 all_temp_exps <- lapply(all_temp_exps, function(x){
   x %>%   
@@ -134,6 +136,8 @@ all_temp_exps %>%
   geom_col(aes(x = image_set, y = sum_intensities/sum_intensities[1]), fill = "blue")
   #geom_col(aes(x = image_set, y = avg_upc/avg_upc[1]), fill = "orange")
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
+
+ggsave("/Users/ryanhecht/Desktop/V5-troubleshoot_e451_s1.2.png")
 ```
 
 # Statistics
@@ -189,16 +193,16 @@ temp_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V5", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
+temp_plot <- uptake_plot(all_temp_exps, output_name = "all_temp_exps_V5.4", condition_label = "Incubation Temperature", add_stats = TRUE, temp_t_test)
 temp_plot 
 ```
 Table of the plotted values
 ```{r}
 all_temp_exps %>% 
-  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
-  summarise() %>% 
-  kbl() %>% 
-  kable_paper()
+  group_by(tissue, exp, condition, condition_avg, tissue_avg, condition_sd) %>%
+  summarise()
+  # kbl() %>% 
+  # kable_paper()
 ```
 
 Seems that using the V5 pipeline, there is no difference between the treatment conditions anymore... This is suspicious. When I glance at the number of ON-BCs in each image, it appears more variable than it should be. Let's take a look:
@@ -212,7 +216,7 @@ all_temp_exps %>%
   labs(x = "Image")+
   theme(axis.text = element_text(color = "black"),
         axis.ticks = element_line(color = "black"),
-        axis.text.x = element_text(angle = 90))
+        axis.text.x = element_text(angle = 90, vjust = 0.5))
 
 ```
 With the exception of a few images, the number of ON-BCs is actually relatively consistent and does not appear to vary across condition

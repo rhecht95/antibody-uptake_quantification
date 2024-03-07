@@ -65,7 +65,7 @@ avg_uptake <- function(df){
   sum_intensities <- df %>%
     group_by(image_set) %>%
     filter(str_detect(type, "Real uptake")) %>%
-    pull(sum_intensities_3)
+    pull(sum_intensities_5)
 
   #get a vector of the count of ON-BCs per image
   num_on_bcs <- df %>%
