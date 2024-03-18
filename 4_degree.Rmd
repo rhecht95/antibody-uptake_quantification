@@ -66,7 +66,7 @@ all_temp_exps <- list("e450" = e450, "e451" = e451, "e452" = e452)
 
 # Data Analysis
 
-The "mean_intensities_3" in the dataframe is an average of the signal intensity from channel 3 within a given RBC (segmented by its Td tomato reporter), so this is an individual cell average. We next need to average the signal across all cells on a given piece of tissue. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the total number of bipolar cells in the image. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells in the ROI. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
 
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
@@ -137,7 +137,7 @@ all_temp_exps %>%
   #geom_col(aes(x = image_set, y = avg_upc/avg_upc[1]), fill = "orange")
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
 
-ggsave("/Users/ryanhecht/Desktop/V5-troubleshoot_e451_s1.2.png")
+#ggsave("/Users/ryanhecht/Desktop/V5-troubleshoot_e451_s1.2.png")
 ```
 
 # Statistics
