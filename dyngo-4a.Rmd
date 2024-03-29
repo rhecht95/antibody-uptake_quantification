@@ -38,6 +38,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
+**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4.1
 
 
 ## Read in the Data
@@ -58,9 +59,18 @@ DMSO_imgs <- c("s1.1", "s1.3", "s2.1")
 dyngo_imgs <- c("s3.2", "s4.1")
 e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
+#e1-456
+DMSO_imgs <- c("s2.1", "s2.2", "s2.3")
+dyngo_imgs <- c("s3.3")
+e456 <- read_n_clean(folder_path = "data/e1-456", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
+
+#e1-458
+DMSO_imgs <- c("none") #only dyngo images for this data set
+dyngo_imgs <- c("s3.2")
+e458 <- read_n_clean(folder_path = "data/e1-458", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
 #place all experiment dataframes into a list for batch processing
-all_dyngo_exps <- list("e449" = e449, "e455" = e455)
+all_dyngo_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e458)
 ```
 
 
@@ -79,15 +89,25 @@ sample_string <- "s.*?.?(?=-)"
 all_dyngo_exps <- lapply(all_dyngo_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
 all_dyngo_exps[1]
 ```
-Next, group by `tissue` and average `mean_intensities_3`. Also group by `image_set` and average `mean_intensities_3`
+## Calculate the average uptake per ON-BC (`avg_upc`)
+
+Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+
+- total number of ON-BCs can be found by counting rows with ON-BCs in the name
+- as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
+
+```{r}
+all_dyngo_exps <- lapply(all_dyngo_exps, avg_uptake)
+```
+
+
+## Averaging across tissue
+Next, group by `tissue` and average `avg_upc`
 ```{r}
 all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
   x %>%   
     group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(mean_intensities_3)) %>% 
-    ungroup() %>% 
-    group_by(image_set) %>% 
-    mutate(img_avg = mean(mean_intensities_3)) %>% 
+    mutate(tissue_avg = mean(avg_upc)) %>% 
     ungroup()
   })
 
@@ -97,7 +117,7 @@ all_dyngo_exps[1]
 Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
 ```{r}
 all_dyngo_exps[[1]] %>%
-    group_by(image_set, tissue, condition, tissue_avg, img_avg) %>% 
+    group_by(image_set, tissue, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
     summarise() %>% 
   kbl() %>% 
   kable_paper()
@@ -126,8 +146,7 @@ Data includes one continuous outcome variable (uptake signal intensity), one cat
 
 ## Shapiro-Wilk Normality test
 
-- try performing on every individual data point: `mean_intensities_3`
-- try performing on just what goes into the plot: `tissue_avg`
+- performing on just what goes into the plot: `tissue_avg`
 
 Histogram on points to be plotted
 ```{r}
@@ -153,6 +172,8 @@ if(shapiro_result$p.value < 0.05){
 }
 
 ```
+Visually, the data appears very close to normally distributed. The Shapiro-Wilk test does not agree but it is very close to the threshold and apparently these tests lack sensitivity for small sample sizes. 
+
 
 ## Un-paired T-test
 
@@ -172,7 +193,7 @@ dyngo_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V5", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
+dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V5.4", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
 dyngo_plot
 ```
 Table of the plotted values
@@ -187,3 +208,27 @@ all_dyngo_exps %>%
 The point at tissue_avg == 2.9 is from s3.2 in e455. In my notes I said I was skeptical of this piece of tissue because uptake signal was completely absent, which is something I had not seen before. 
 
 The s1.2 from e1-449 is very high signal compared to all the rest. Looking at my notes from this piece, I mention intense coverslip reflections... I think that could be thowing off the quantification 
+
+- **NOTE** the pipeline now corrects for coverslip reflections, as any images with reflections have been cropped out. So this should be considered the true uptake signal
+
+Plotting tissue average by condition and experiment number
+```{r}
+all_dyngo_exps %>% 
+  ggplot()+
+  geom_point(aes(x = exp, y = tissue_avg, color = condition), alpha = 0.7)+
+  theme_classic()
+```
+
+Alternative approach to quantifying... take the average of the summed pixel intensities within ON-BC volumes
+```{r}
+all_dyngo_exps %>% 
+  group_by(image_set) %>% 
+  mutate(avg_sum_intens = mean(sum_intensities_3)) %>% 
+  ungroup() %>% 
+  summarise(exp, image_set, tissue, condition, avg_sum_intens) %>% 
+  unique() %>% 
+  ggplot(aes(x = condition, y = avg_sum_intens))+
+  geom_jitter(aes(color = exp, shape = condition), width = 0.1)+
+  theme_classic2()
+```
+
