@@ -14,7 +14,7 @@ In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
 
-This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
+**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
 
 Channel guide:
 
