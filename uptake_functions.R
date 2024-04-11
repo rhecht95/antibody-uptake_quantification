@@ -89,3 +89,10 @@ avg_uptake <- function(df){
 
   df
 }
+
+# Calculate the average uptake per volume of ON-BC (summed pixel intensities over total ON-BC volume). Applicable for V4.2 pipeline.
+avg_uptake_vol <- function(df){
+  df <- df %>%
+    group_by(image_set) %>%
+    mutate(avg_upc = (sum(sum_intensities_5))/(sum(volume_volume_um3)))
+}

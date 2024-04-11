@@ -14,8 +14,6 @@ In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
 
-**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
-
 Channel guide:
 
   - Channel 1 = Zombie dye
@@ -34,7 +32,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
-
+**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
 
 ## Read in the Data
 
@@ -97,7 +95,7 @@ Next, group by `tissue` and average `avg_upc`
 all_temp_exps <- lapply(all_temp_exps, function(x){
   x %>%   
     group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(avg_upc)) %>% 
+    mutate(tissue_avg = mean(unique(avg_upc))) %>% 
     ungroup()
   })
 ```
@@ -121,7 +119,7 @@ When plotting, each piece of tissue (tissue average) will be a point. The bar wi
 ```{r}
 all_temp_exps <- all_temp_exps %>% 
     group_by(condition) %>% 
-    mutate(condition_avg = mean(tissue_avg),
+    mutate(condition_avg = mean(unique(tissue_avg)),
            condition_sd = sd(tissue_avg)) %>% 
     ungroup()
 ```

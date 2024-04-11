@@ -1,6 +1,6 @@
 ---
-title: "Dyngo-4a Treatment Split Retina"
-date: "2024-01-09"
+title: "Imipramine Treatment Split Retina"
+date: "2024-03-29"
 output:
   html_document:
     toc: true
@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize anti-TRPM1 autoantibodies, bringing them into their cytosol using an unknown mechanism. This experiment serves to elucidate the cellular mechanisms contributing to antibody uptake by pharmacologically inhibiting various endocytic pathways and observing the consequences on antibody uptake as seen in an *ex vivo* split mouse retina.
 
-In this project, the effect of inhibiting dynamin-dependent endocytosis is observed by treating split retinas with Dyngo-4a. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of Dyngo 4a. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
+In this project, the effect of inhibiting dynamin-dependent endocytosis is observed by treating split retinas with imipramine-4a. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of imipramine 4a. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
 
@@ -38,7 +38,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
-**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V5.4
+**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V4.2
 
 
 ## Read in the Data
@@ -47,36 +47,33 @@ For each individual experiment, there is a separate excel workbook of data gener
 
 Variable names are then cleaned with `janitor` and extraneous columns are excluded (can be retrieved for different analysis later)
 
-The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2)
+The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs imipramine) to samples by the name of the sample (i.e "s1.2")
 ```{r}
-#e1-449
-DMSO_imgs <- c("s1.2-1", "s1.2-2", "s2.1","s2.3")
-dyngo_imgs <- c("s3.1", "s3.2", "s3.3", "s4.1", "s4.3")
-e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
+#e1-459
+# DMSO_imgs <- c("s1.1", "s1.2")
+# imipramine_imgs <- c("s3.1", "s3.2", "s3.3")
+# e459 <- read_n_clean(folder_path = "data/e1-459", cond1_vec = DMSO_imgs, cond2_vec = imipramine_imgs, cond1_title = "DMSO", cond2_title = "Imipramine")
 
-#e1-455
-DMSO_imgs <- c("s1.1", "s1.3", "s2.1")
-dyngo_imgs <- c("s3.2", "s4.1")
-e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
-
-#e1-456
+#e1-460
 DMSO_imgs <- c("s2.1", "s2.2", "s2.3")
-dyngo_imgs <- c("s3.3")
-e456 <- read_n_clean(folder_path = "data/e1-456", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
+imipramine_imgs <- c("s3.1", "s3.3", "s4.3")
+e460 <- read_n_clean(folder_path = "data/e1-460", cond1_vec = DMSO_imgs, cond2_vec = imipramine_imgs, cond1_title = "DMSO", cond2_title = "Imipramine")
 
-#e1-458
-DMSO_imgs <- c("none") #only dyngo images for this data set
-dyngo_imgs <- c("s3.2")
-e458 <- read_n_clean(folder_path = "data/e1-458", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
+#e1-461
+DMSO_imgs <- c("s2.2", "s2.3")
+imipramine_imgs <- c("s4.3")
+e461 <- read_n_clean(folder_path = "data/e1-461", cond1_vec = DMSO_imgs, cond2_vec = imipramine_imgs, cond1_title = "DMSO", cond2_title = "Imipramine")
 
 #place all experiment dataframes into a list for batch processing
-all_dyngo_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e458)
+all_imipramine_exps <- list("e460" = e460, "e461" = e461)
 ```
 
 
 # Data Analysis
 
-The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the total number of bipolar cells in the image. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells in the ROI. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+These data are processed by a different Arivis pipeline than the Dyngo-4a and 4 ºC experiments owing to the fact that the repair of the Leica WLL increased the intensity of the pixel values while using the same acquisition settings. Since the enhanced brightness helped reveal more cell body uptake, I decided to leave the settings rather than adjust them to produce the same pixel values as the earlier experiments. The consequence is that there is cell body labeling associated with dead cells that falls below the intensity filter threshold which excluded "false uptake" or uptake from dead cells. This filter is still in place, and effectively removes signal caused by uptake in the *dendrites* of dead cells, but to ignore uptake from dead cell bodies, I moved back to an earlier version of the pipeline (V4.2) which only counts uptake that occurs within ON-BC cell bodies. I previously demonstrated that this strategy produces extremely similar results to the V5 pipeline.
+
+The "sum_intensities_5" in the dataframe is the result of creating a new channel from channel 3 with the intensity threshold filter applied to remove fake uptake. This is the sum of pixel values that fall within any given ON-BC. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
 
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
@@ -86,58 +83,58 @@ Begin by identifying all images that come from the same piece of tissue, using a
 sample_string <- "s.*?.?(?=-)"
 
 #add new variable "tissue" that uses the regex to match all images from the same piece of tissue
-all_dyngo_exps <- lapply(all_dyngo_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
-all_dyngo_exps[1]
+all_imipramine_exps <- lapply(all_imipramine_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
+all_imipramine_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in a given "cell" (after filtering) and sum this value across all "cells" in an image. Then divide this by the total volume of "cells" in that image
 
-- total number of ON-BCs can be found by counting rows with ON-BCs in the name
-- as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
+- calculating by volume because the number of cells will not be accurate based on the way the blob finder algorithm is drawing cell boundaries
+- Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
 
 ```{r}
-all_dyngo_exps <- lapply(all_dyngo_exps, avg_uptake)
+all_imipramine_exps <- lapply(all_imipramine_exps, avg_uptake_vol)
 ```
 
 
 ## Averaging across tissue
 Next, group by `tissue` and average `avg_upc`
 ```{r}
-all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
+all_imipramine_exps <- lapply(all_imipramine_exps, function(x){
   x %>%   
     group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
     mutate(tissue_avg = mean(unique(avg_upc))) %>% 
     ungroup()
   })
 
-all_dyngo_exps[1]
+all_imipramine_exps[1]
 ```
 
 Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
 ```{r}
-all_dyngo_exps[[1]] %>%
-    group_by(image_set, tissue, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
+all_imipramine_exps[[1]] %>%
+    group_by(image_set, tissue, condition, avg_upc, tissue_avg) %>% 
     summarise() %>% 
   kbl() %>% 
   kable_paper()
 ```
 Merge all dataframes in list into one dataframe
 ```{r}
-all_dyngo_exps <- bind_rows(all_dyngo_exps, .id = "exp") %>% 
+all_imipramine_exps <- bind_rows(all_imipramine_exps, .id = "exp") %>% 
   mutate(exp = as.factor(exp))
 ```
 
 
 When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
 ```{r}
-all_dyngo_exps <- all_dyngo_exps %>% 
+all_imipramine_exps <- all_imipramine_exps %>% 
     group_by(condition) %>% 
     mutate(condition_avg = mean(unique(tissue_avg)),
            condition_sd = sd(tissue_avg)) %>% 
     ungroup()
 
-#all_dyngo_exps
+#all_imipramine_exps
 ```
 
 # Statistics
@@ -150,7 +147,7 @@ Data includes one continuous outcome variable (uptake signal intensity), one cat
 
 Histogram on points to be plotted
 ```{r}
-all_dyngo_exps %>% 
+all_imipramine_exps %>% 
   group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
   summarise() %>% 
   pull(tissue_avg) %>%
@@ -158,7 +155,7 @@ all_dyngo_exps %>%
 ```
 Shapiro-Wilk on points to be plotted
 ```{r}
-shapiro_result <- all_dyngo_exps %>% 
+shapiro_result <- all_imipramine_exps %>% 
   group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
   summarise() %>% 
   pull(tissue_avg) %>% 
@@ -172,14 +169,14 @@ if(shapiro_result$p.value < 0.05){
 }
 
 ```
-Visually, the data appears very close to normally distributed. The Shapiro-Wilk test does not agree but it is very close to the threshold and apparently these tests lack sensitivity for small sample sizes. 
+
 
 
 ## Un-paired T-test
 
 Performing a Welch's t-test since this does not assume the variance in the two groups is the same.
 ```{r}
-dyngo_t_test <- all_dyngo_exps %>% 
+imipramine_t_test <- all_imipramine_exps %>% 
   group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
   summarise() %>% #the group by and summarize lines are to filter to only the data that will be plotted and was tested in the normality test
   ungroup() %>% 
@@ -187,37 +184,32 @@ dyngo_t_test <- all_dyngo_exps %>%
   add_significance() %>% 
   add_xy_position(x = "condition")
 
-dyngo_t_test
+imipramine_t_test
 ```
 
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V5.4", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
-dyngo_plot
+imipramine_plot <- uptake_plot(all_imipramine_exps, output_name = "all_imipramine_exps_V5.4", condition_label = "Condition", add_stats = TRUE, imipramine_t_test)
+imipramine_plot
 ```
 Table of the plotted values
 ```{r}
-all_dyngo_exps %>% 
+all_imipramine_exps %>% 
   group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
   summarise() %>% 
   kbl() %>% 
   kable_paper()
 ```
 
-The point at tissue_avg == 2.9 is from s3.2 in e455. In my notes I said I was skeptical of this piece of tissue because uptake signal was completely absent, which is something I had not seen before. 
 
-The s1.2 from e1-449 is very high signal compared to all the rest. Looking at my notes from this piece, I mention intense coverslip reflections... I think that could be thowing off the quantification 
-
-- **NOTE** the pipeline now corrects for coverslip reflections, as any images with reflections have been cropped out. So this should be considered the true uptake signal
 
 Plotting tissue average by condition and experiment number
 ```{r}
-all_dyngo_exps %>% 
+all_imipramine_exps %>% 
   ggplot()+
   geom_point(aes(x = exp, y = tissue_avg, color = condition), alpha = 0.7)+
   theme_classic()
 ```
-
 
 
