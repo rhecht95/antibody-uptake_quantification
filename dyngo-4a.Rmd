@@ -76,7 +76,7 @@ all_dyngo_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e45
 
 # Data Analysis
 
-The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the total number of bipolar cells in the image. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells in the ROI. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
 
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
@@ -153,8 +153,8 @@ all_dyngo_exps %>%
   summarise() %>% 
   filter(exp == "e449") %>% 
   ggplot()+
-  geom_col(aes(x = image_set, y = tissue_avg), fill = "orange")+
-  geom_col(aes(x = image_set, y = avg_upc), fill = "blue")+
+  geom_col(aes(x = image_set, y = avg_upc))+
+  geom_point(aes(x = image_set, y = tissue_avg), color = "orange")+
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
   theme(axis.text.x = element_text(angle = 90))
 ```
