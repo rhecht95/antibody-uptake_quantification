@@ -91,7 +91,9 @@ all_dyngo_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+`sum_intensities_5` represents the total amount of 488-uptake signal in an image (after filtering). This will be divided by the total number of ON-BCs to produce `avg_upc`
+
+- images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
 
 - total number of ON-BCs can be found by counting rows with ON-BCs in the name
 - as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
@@ -100,34 +102,36 @@ Take `sum_intensities_5`, which represents the total amount of 488-uptake signal
 all_dyngo_exps <- lapply(all_dyngo_exps, avg_uptake)
 ```
 
-
-## Averaging across tissue
-Next, group by `tissue` and average `avg_upc`
-```{r}
-all_dyngo_exps <- lapply(all_dyngo_exps, function(x){
-  x %>%   
-    group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(unique(avg_upc))) %>% 
-    ungroup()
-  })
-
-all_dyngo_exps[1]
-```
-
-Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
-```{r}
-all_dyngo_exps[[1]] %>%
-    group_by(image_set, tissue, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
-    summarise() %>% 
-  kbl() %>% 
-  kable_paper()
-```
 Merge all dataframes in list into one dataframe
 ```{r}
 all_dyngo_exps <- bind_rows(all_dyngo_exps, .id = "exp") %>% 
   mutate(exp = as.factor(exp))
 
-all_dyngo_exps["avg_on_bc_count"] <- mean(all_dyngo_exps$on_bc_count)
+#averaging the number of ON-BCs across all images in data set to account for dim Td tom signal that caused miscount
+all_dyngo_exps["avg_on_bc_count"] <- mean(all_dyngo_exps$on_bc_count) 
+
+#average uptake per cell, sum intensity for a single image over the avg ON-BC count for all experiments
+all_dyngo_exps["avg_upc"] <- all_dyngo_exps$sum_intensities/all_dyngo_exps$avg_on_bc_count 
+```
+
+
+## Averaging across tissue
+Next, group by `exp` and  `tissue`, then average `avg_upc`
+```{r}
+all_dyngo_exps <- all_dyngo_exps %>% 
+    group_by(exp, tissue) %>% #first compute avg grouping by tissue (contains multiple images)
+    mutate(tissue_avg = mean(avg_upc)) %>% 
+    ungroup()
+```
+
+Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
+```{r}
+all_dyngo_exps %>%
+  group_by(image_set, exp, tissue, condition, sum_intensities, avg_on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  arrange(exp) %>% 
+  kbl() %>% 
+  kable_paper()
 ```
 
 
@@ -138,8 +142,6 @@ all_dyngo_exps <- all_dyngo_exps %>%
     mutate(condition_avg = mean(unique(tissue_avg)),
            condition_sd = sd(tissue_avg)) %>% 
     ungroup()
-
-#all_dyngo_exps
 ```
 
 ## Validation and testing
@@ -169,7 +171,7 @@ all_dyngo_exps %>%
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
   theme(axis.text.x = element_text(angle = 90))
 
-ggsave("/Users/ryanhecht/Desktop/e1-449_e1-456_dmso.pdf")
+#ggsave("/Users/ryanhecht/Desktop/e1-449_e1-456_dmso.pdf")
 ```
 
 
@@ -207,7 +209,7 @@ if(shapiro_result$p.value < 0.05){
 }
 
 ```
-Visually, the data appears very close to normally distributed. The Shapiro-Wilk test does not agree but it is very close to the threshold and apparently these tests lack sensitivity for small sample sizes. 
+Visually, the data appears very close to normally distributed.
 
 
 ## Un-paired T-test
@@ -241,9 +243,6 @@ all_dyngo_exps %>%
   kable_paper()
 ```
 
-The point at tissue_avg == 2.9 is from s3.2 in e455. In my notes I said I was skeptical of this piece of tissue because uptake signal was completely absent, which is something I had not seen before. 
-
-The s1.2 from e1-449 is very high signal compared to all the rest. Looking at my notes from this piece, I mention intense coverslip reflections... I think that could be thowing off the quantification 
 
 - **NOTE** the pipeline now corrects for coverslip reflections, as any images with reflections have been cropped out. So this should be considered the true uptake signal
 

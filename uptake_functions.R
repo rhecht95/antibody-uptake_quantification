@@ -80,7 +80,7 @@ avg_uptake <- function(df){
     summarise()
 
   #add the new variables to the df
-  df['sum_intensities'] <- sum_intensities #add the sum_intensities vector to the dataframe
+  df['sum_intensities'] <- sum_intensities #add the sum_intensities vector to the data frame
   df['on_bc_count'] <- num_on_bcs #add the number of ON-BCs in the image to the df
 
   #calculate uptake per cell `avg_upc`
