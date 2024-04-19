@@ -60,7 +60,7 @@ dyngo_imgs <- c("s3.2", "s4.1")
 e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
 #e1-456
-DMSO_imgs <- c("s2.2", "s2.3") #removed s2.1
+DMSO_imgs <- c("s2.1", "s2.2", "s2.3") #potentially remove s2.1
 dyngo_imgs <- c("s3.3")
 e456 <- read_n_clean(folder_path = "data/e1-456", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
@@ -126,6 +126,8 @@ Merge all dataframes in list into one dataframe
 ```{r}
 all_dyngo_exps <- bind_rows(all_dyngo_exps, .id = "exp") %>% 
   mutate(exp = as.factor(exp))
+
+all_dyngo_exps["avg_on_bc_count"] <- mean(all_dyngo_exps$on_bc_count)
 ```
 
 
@@ -147,7 +149,6 @@ Verifying avg_upc calculation
 all_dyngo_exps %>% 
   group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
   summarise() %>% 
-  arrange(exp) %>% 
   filter(exp == "e449") %>% 
   ggplot()+
   geom_col(aes(x = image_set, y = tissue_avg), fill = "orange")+
@@ -160,15 +161,15 @@ Making sure that image intensities (as seen by eye) actually match plotted value
 all_dyngo_exps %>% 
   group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
   summarise() %>% 
-  arrange(exp) %>% 
-  filter((exp == "e449" & tissue == "s2.1") | (exp == "e456" & tissue == "s2.3")) %>% 
+  filter((exp == "e449" & tissue == "s2.1") | (exp == "e456" & tissue == "s2.3")) %>% #for selecting specific tissue within specific exp
+  #filter(exp == "e456") %>% 
   ggplot()+
   #geom_col(aes(x = image_set, y = tissue_avg), fill = "orange")+
-  geom_col(aes(x = image_set, y = sum_intensities), fill = "blue")+
+  geom_col(aes(x = image_set, y = sum_intensities, fill = condition))+
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
   theme(axis.text.x = element_text(angle = 90))
 
-#ggsave("/Users/ryanhecht/Desktop/sum-intensities.pdf")
+ggsave("/Users/ryanhecht/Desktop/e1-449_e1-456_dmso.pdf")
 ```
 
 
@@ -235,6 +236,7 @@ Table of the plotted values
 all_dyngo_exps %>% 
   group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
   summarise() %>% 
+  arrange(condition, tissue_avg) %>% 
   kbl() %>% 
   kable_paper()
 ```

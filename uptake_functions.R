@@ -84,8 +84,8 @@ avg_uptake <- function(df){
   df['on_bc_count'] <- num_on_bcs #add the number of ON-BCs in the image to the df
 
   #calculate uptake per cell `avg_upc`
-  df <- df %>%
-    mutate(avg_upc = sum_intensities/on_bc_count)
+  # df <- df %>%
+  #   mutate(avg_upc = sum_intensities/on_bc_count) #now calculating this as an average for the whole data set, after merging all experiments into one df
 
   df
 }
