@@ -50,7 +50,7 @@ Variable names are then cleaned with `janitor` and extraneous columns are exclud
 The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2)
 ```{r}
 #e1-449
-DMSO_imgs <- c("s1.2-1", "s1.2-2", "s2.1","s2.3")
+DMSO_imgs <- c("s2.1","s2.3") #removed s1.2
 dyngo_imgs <- c("s3.1", "s3.2", "s3.3", "s4.1", "s4.3")
 e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
@@ -60,7 +60,7 @@ dyngo_imgs <- c("s3.2", "s4.1")
 e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
 #e1-456
-DMSO_imgs <- c("s2.1", "s2.2", "s2.3")
+DMSO_imgs <- c("s2.2", "s2.3") #removed s2.1
 dyngo_imgs <- c("s3.3")
 e456 <- read_n_clean(folder_path = "data/e1-456", cond1_vec = DMSO_imgs, cond2_vec = dyngo_imgs, cond1_title = "DMSO", cond2_title = "Dyngo-4a")
 
@@ -140,6 +140,40 @@ all_dyngo_exps <- all_dyngo_exps %>%
 #all_dyngo_exps
 ```
 
+## Validation and testing
+
+Verifying avg_upc calculation
+```{r}
+all_dyngo_exps %>% 
+  group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  arrange(exp) %>% 
+  filter(exp == "e449") %>% 
+  ggplot()+
+  geom_col(aes(x = image_set, y = tissue_avg), fill = "orange")+
+  geom_col(aes(x = image_set, y = avg_upc), fill = "blue")+
+  #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
+  theme(axis.text.x = element_text(angle = 90))
+```
+Making sure that image intensities (as seen by eye) actually match plotted values
+```{r}
+all_dyngo_exps %>% 
+  group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  arrange(exp) %>% 
+  filter((exp == "e449" & tissue == "s2.1") | (exp == "e456" & tissue == "s2.3")) %>% 
+  ggplot()+
+  #geom_col(aes(x = image_set, y = tissue_avg), fill = "orange")+
+  geom_col(aes(x = image_set, y = sum_intensities), fill = "blue")+
+  #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
+  theme(axis.text.x = element_text(angle = 90))
+
+#ggsave("/Users/ryanhecht/Desktop/sum-intensities.pdf")
+```
+
+
+
+This visual verifies that the tissue_avg is being calculated appropriately
 # Statistics
 
 Data includes one continuous outcome variable (uptake signal intensity), one categorical predictor variable (treatment condition). If the data are normally distributed, then significant difference between groups can be assessed using an `independent t test (unpaired)`
