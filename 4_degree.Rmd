@@ -64,7 +64,7 @@ all_temp_exps <- list("e450" = e450, "e451" = e451, "e452" = e452)
 
 # Data Analysis
 
-The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the total number of bipolar cells in the image. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells in the ROI. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
 
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
@@ -79,7 +79,9 @@ all_temp_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-Take `sum_intensities_5`, which represents the total amount of 488-uptake signal in an image (after filtering), and divide by the total number of ON-BCs in the image
+`sum_intensities_5` represents the total amount of 488-uptake signal in an image (after filtering). This will be divided by the total number of ON-BCs to produce `avg_upc`
+
+- images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
 
 - total number of ON-BCs can be found by counting rows with ON-BCs in the name
 - as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
@@ -88,32 +90,38 @@ Take `sum_intensities_5`, which represents the total amount of 488-uptake signal
 all_temp_exps <- lapply(all_temp_exps, avg_uptake)
 ```
 
-
-## Averaging across tissue
-Next, group by `tissue` and average `avg_upc`
-```{r}
-all_temp_exps <- lapply(all_temp_exps, function(x){
-  x %>%   
-    group_by(tissue) %>% #first compute avg grouping by tissue (contains multiple images)
-    mutate(tissue_avg = mean(unique(avg_upc))) %>% 
-    ungroup()
-  })
-```
-
-Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
-```{r}
-all_temp_exps[[2]] %>%
-  group_by(image_set, tissue, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
-  summarise() %>% 
-  kbl() %>%
-  kable_paper()
-```
-
 Merge all dataframes in list into one dataframe
 ```{r}
 all_temp_exps <- bind_rows(all_temp_exps, .id = "exp") %>% 
   mutate(exp = as.factor(exp))
+
+#averaging the number of ON-BCs across all images in data set to account for dim Td tom signal that caused miscount
+all_temp_exps["avg_on_bc_count"] <- mean(all_temp_exps$on_bc_count) 
+
+#average uptake per cell, sum intensity for a single image over the avg ON-BC count for all experiments
+all_temp_exps["avg_upc"] <- all_temp_exps$sum_intensities/all_temp_exps$avg_on_bc_count 
 ```
+
+
+## Averaging across tissue
+Next, group by `exp` and  `tissue`, then average `avg_upc`
+```{r}
+all_temp_exps <- all_temp_exps %>% 
+    group_by(exp, tissue) %>% #first compute avg grouping by tissue (contains multiple images)
+    mutate(tissue_avg = mean(avg_upc)) %>% 
+    ungroup()
+```
+
+Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
+```{r}
+all_temp_exps %>%
+  group_by(image_set, exp, tissue, condition, sum_intensities, avg_on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  arrange(exp) %>% 
+  kbl() %>% 
+  kable_paper()
+```
+
 
 When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
 ```{r}
@@ -124,18 +132,18 @@ all_temp_exps <- all_temp_exps %>%
     ungroup()
 ```
 
-Troubleshooting avg_upc calculation
+## Validation and testing
+Verifying avg_upc calculation
 ```{r}
 all_temp_exps %>% 
   group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
   summarise() %>% 
-  filter(exp == "e451" & tissue == "s1.2") %>% 
+  filter(exp == "e451") %>% 
   ggplot()+
-  geom_col(aes(x = image_set, y = sum_intensities/sum_intensities[1]), fill = "blue")
-  #geom_col(aes(x = image_set, y = avg_upc/avg_upc[1]), fill = "orange")
+  geom_col(aes(x = image_set, y = avg_upc))+
+  geom_point(aes(x = image_set, y = tissue_avg), color = "orange")+
   #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
-
-#ggsave("/Users/ryanhecht/Desktop/V5-troubleshoot_e451_s1.2.png")
+  theme(axis.text.x = element_text(angle = 90))
 ```
 
 # Statistics
@@ -197,16 +205,16 @@ temp_plot
 Table of the plotted values
 ```{r}
 all_temp_exps %>% 
-  group_by(tissue, exp, condition, condition_avg, tissue_avg, condition_sd) %>%
+  group_by(image_set,sum_intensities, tissue, exp, condition, condition_avg, tissue_avg) %>%
   summarise()
   # kbl() %>% 
   # kable_paper()
 ```
 
-Seems that using the V5 pipeline, there is no difference between the treatment conditions anymore... This is suspicious. When I glance at the number of ON-BCs in each image, it appears more variable than it should be. Let's take a look:
+Sum intensities by image
 ```{r}
 all_temp_exps %>% 
-  ggplot(aes(x = image_set, y = sum_intensities))+
+  ggplot(aes(x = image_set, y = avg_upc))+
   geom_col()+
   facet_wrap(vars(condition), scales = "free_x")+
   theme_classic()+
@@ -217,8 +225,6 @@ all_temp_exps %>%
         axis.text.x = element_text(angle = 90, vjust = 0.5))
 
 ```
-With the exception of a few images, the number of ON-BCs is actually relatively consistent and does not appear to vary across condition
-The number of cells per image is surprisingly high, but as long as it is uniformly high it will not make any difference
 
 Analyzing the change in `avg_upc` across experiments
 ```{r}
@@ -227,10 +233,3 @@ all_temp_exps %>%
   geom_point(aes(x = exp, y = avg_upc, color = condition), alpha = 0.7)+
   theme_classic()
 ```
-This is showing a few interesting things:
-
-- e452 looks lower on average across conditions
-- the 37 ºC group is not clearly higher than the 4º group
-
-I think there is something wrong with this analysis pipeline. Speaking with Danny, he made an interesting point. I switched to this sum_intensities strategy because I was worried that not enough important signal in the ON-BC dendrites was being captured by the segmentation volumes. However, even if they aren't capturing all of the signal, maybe it is important for filtering out noise elsewhere in the image. Maybe there is too much noise outside of the ON-BCs volumes that is causing the conditions to appear equal.
-
