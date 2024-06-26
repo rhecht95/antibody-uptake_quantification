@@ -35,9 +35,9 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
     summarise() %>%
     ggplot() +
     geom_bar(aes(x = condition, y = condition_avg),color = "black", fill = "white", position = "dodge", stat = "identity")+
-    geom_point(aes(x = condition, y = tissue_avg, fill = exp), shape =  21, alpha = 0.75, position = position_jitter(width = 0.1))+
     geom_errorbar(aes(x = condition, ymin = condition_avg + condition_sd, ymax = condition_avg + condition_sd ), position = "dodge", width = 0.2)+
     geom_linerange(aes(x = condition, ymin = condition_avg, ymax = condition_avg + condition_sd))+ #this is a trick to get a 'one-sided' error bar on a bar plot
+    geom_point(aes(x = condition, y = tissue_avg), fill = "#E78D6F", shape =  21, alpha = 0.75, position = position_jitter(width = 0.1))+
     scale_y_continuous(expand = expansion(c(0,0.1)))+
     labs(x = condition_label, y = "Average Uptake/Cell", fill = "Experiment")+
     theme_classic()+
@@ -51,7 +51,7 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
   }
 
   df_plot
-  ggsave(filename = paste0("output/", output_name, ".pdf"), device = "pdf", dpi = 300, height = 7, width = 6, scale = 0.6)
+  ggsave(filename = paste0("output/", output_name, ".pdf"), device = "pdf", dpi = 300, height = 7, width = 4.5, scale = 0.45)
   df_plot
 }
 
