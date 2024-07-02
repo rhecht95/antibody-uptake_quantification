@@ -18,7 +18,7 @@ In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize 
 
 In this project, the effect of inhibiting dynamin-dependent endocytosis is observed by treating split retinas with Dyngo-4a. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of Dyngo 4a. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
 
-Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
+Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that segments true uptake signal from internalized antibody based on a machine learning algorithm trained on these data. This segmentation is trained to ignore the super bright signal produced from dead cells and staining artifacts. ON-BCs are counted using the Cellpose algorithm, and average uptake is calculated by summing the uptake signal and dividing by the number of ON-BCs. 
 
 Channel guide:
 
@@ -38,7 +38,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
-**Pipeline Version**: this notebook is updated to process output from Arivis pipeline V5.4
+**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_ML_V1.pipeline"
 
 
 ## Read in the Data
@@ -76,8 +76,7 @@ all_dyngo_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e45
 
 # Data Analysis
 
-The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
-
+The current analysis pipeline produces two object types: "Segment ON-BCs" and "Segment Uptake." The number of Segment ON-BC objects equals the number of ON-BCs counted in the image. The number of Segment Uptake objects is arbitrary, but represent the segmentation objects identified by the ML model. To get the total uptake signal, the "sum_intensities_3" value is summed for every one of the Segment Uptake objects. The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images.
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
 Begin by identifying all images that come from the same piece of tissue, using a Regex to identify this based on the sample name

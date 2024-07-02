@@ -12,7 +12,7 @@ date: "2024-01-23"
 
 In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize anti-TRPM1 autoantibodies, bringing them into their cytosol using an unknown mechanism. This experiment serves as a negative control for evaluating the cellular mechanisms contributing to antibody uptake, as cold temperatures are known to inhibit all forms of endocytosis. Split retinas are equilibrated to and maintained at 37º or 4º during incubation with a PKCa antibody. The expectation is that antibody internalization is significantly reduced or absent in the 4º group compared to the 37º group.
 
-Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that quantifies internalized antibody only within rod bipolar cells (segmented based on transgenic Td tomato expression), excluding any dead cells or bright staining artefacts. 
+Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that segments true uptake signal from internalized antibody based on a machine learning algorithm trained on these data. This segmentation is trained to ignore the super bright signal produced from dead cells and staining artifacts. ON-BCs are counted using the Cellpose algorithm, and average uptake is calculated by summing the uptake signal and dividing by the number of ON-BCs. 
 
 Channel guide:
 
@@ -20,6 +20,8 @@ Channel guide:
   - Channel 2 = Td tomato
   - Channel 3 = AF-488 (uptake)
   - Channel 4 = DIC
+
+**Note**: The machine learning model was trained on 6 channel images because a previous pipeline added two extra channels to every image as a byproduct of using an intensity threshold filter. These extra 2 channels contain no real information. 
 
 # Data Import and Tidying
 ```{r, include=FALSE}
@@ -32,7 +34,7 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
-**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_V5.4.pipeline"
+**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_ML_V1.pipeline"
 
 ## Read in the Data
 
@@ -64,7 +66,8 @@ all_temp_exps <- list("e450" = e450, "e451" = e451, "e452" = e452)
 
 # Data Analysis
 
-The "sum_intensities_5" in the dataframe is the summed pixel intensities for all 488 pixels in an image (summed over all planes). The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images. In other words, the pipeline is not counting signal that falls within ON-BCs. Rather, it is counting all 488 signal (after filtering out "fake uptake") and then making a crude average by dividing that value by the number of cells. There may be multiple (non-overlapping) images from a given piece of tissue, denoted by the number following the hyphen in the sample name:
+The current analysis pipeline produces two object types: "Segment ON-BCs" and "Segment Uptake." The number of Segment ON-BC objects equals the number of ON-BCs counted in the image. The number of Segment Uptake objects is arbitrary, but represent the segmentation objects identified by the ML model. To get the total uptake signal, the "sum_intensities_3" value is summed for every one of the Segment Uptake objects. The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images.
+
 
 <p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
 
