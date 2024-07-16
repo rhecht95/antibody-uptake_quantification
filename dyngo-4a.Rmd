@@ -38,7 +38,8 @@ library(ggpubr)
 library(rstatix)
 source("uptake_functions.R")
 ```
-**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_ML_V1.pipeline"
+**Pipeline Version**: This document has been updated to analyze data processed by Arivis pipeline:  "Ab-uptake_split-retina_ML_V2.pipeline"
+**Data processing date**: 24-07-15
 
 
 ## Read in the Data
@@ -90,12 +91,11 @@ all_dyngo_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-`sum_intensities_5` represents the total amount of 488-uptake signal in an image (after filtering). This will be divided by the total number of ON-BCs to produce `avg_upc`
+`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed for all of these objects. This will be divided by the total number of ON-BCs to produce `avg_upc`
 
 - images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
 
 - total number of ON-BCs can be found by counting rows with ON-BCs in the name
-- as of pipeline V5.4, Channel 5 channel in the image is a new channel that stores the result of applying an intensity filter threshold to the 488 channel (Channel 3).
 
 ```{r}
 all_dyngo_exps <- lapply(all_dyngo_exps, avg_uptake)
@@ -229,7 +229,7 @@ dyngo_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_V5.4", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
+dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_ML_V2", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
 dyngo_plot
 ```
 Table of the plotted values

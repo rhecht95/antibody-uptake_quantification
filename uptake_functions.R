@@ -55,7 +55,7 @@ uptake_plot <- function(df, output_name, condition_label, add_stats = FALSE,...)
   df_plot
 }
 
-# Calculate the average uptake per cell. Applicable on and after the V5 pipeline. Return summary data from the original dataframes
+# Calculate the average uptake per cell. Return summary data from the original dataframes
 avg_uptake <- function(df){
   df <- df %>%
     mutate(name = str_extract(name, "\\([^)]+\\)")) %>% # simplify the name and remove the 'segment' information
@@ -64,8 +64,8 @@ avg_uptake <- function(df){
   #get a vector composed of the sum_intensities_3 from each image
   sum_intensities <- df %>%
     group_by(image_set) %>%
-    filter(str_detect(type, "Real Uptake")) %>%
-    pull(sum_intensities_5) #as of V5.4, the filtered values are stored in a new "Channel 5"
+    filter(str_detect(type, "Uptake")) %>%
+    pull(sum_intensities_3)
 
   #get a vector of the count of ON-BCs per image
   num_on_bcs <- df %>%
