@@ -61,11 +61,13 @@ avg_uptake <- function(df){
     mutate(name = str_extract(name, "\\([^)]+\\)")) %>% # simplify the name and remove the 'segment' information
     rename(type = name) # rename name to 'type'
 
-  #get a vector composed of the sum_intensities_3 from each image
+  #get a vector composed of the summed, sum_intensities_3 from each image
   sum_intensities <- df %>%
     group_by(image_set) %>%
     filter(str_detect(type, "Uptake")) %>%
-    pull(sum_intensities_3)
+    summarise(summed_intensities_3 =sum(sum_intensities_3)) %>%
+    pull(summed_intensities_3)
+
 
   #get a vector of the count of ON-BCs per image
   num_on_bcs <- df %>%

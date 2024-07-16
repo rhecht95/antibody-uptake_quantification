@@ -78,7 +78,7 @@ all_dyngo_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e45
 # Data Analysis
 
 The current analysis pipeline produces two object types: "Segment ON-BCs" and "Segment Uptake." The number of Segment ON-BC objects equals the number of ON-BCs counted in the image. The number of Segment Uptake objects is arbitrary, but represent the segmentation objects identified by the ML model. To get the total uptake signal, the "sum_intensities_3" value is summed for every one of the Segment Uptake objects. The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images.
-<p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
+
 
 Begin by identifying all images that come from the same piece of tissue, using a Regex to identify this based on the sample name
 ```{r}
@@ -91,11 +91,11 @@ all_dyngo_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed for all of these objects. This will be divided by the total number of ON-BCs to produce `avg_upc`
+`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed across all of these objects. The number of segmentation objects is arbitrary and is determined by the machine learning segmentation algorithm. This summed value will be divided by the total number of ON-BCs to produce `avg_upc`
 
 - images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
 
-- total number of ON-BCs can be found by counting rows with ON-BCs in the name
+- total number of ON-BCs can be found by counting rows with ON-BCs in the name with ON-BCs in the name
 
 ```{r}
 all_dyngo_exps <- lapply(all_dyngo_exps, avg_uptake)

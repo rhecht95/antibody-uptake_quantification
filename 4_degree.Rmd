@@ -83,7 +83,7 @@ all_temp_exps[1]
 ```
 ## Calculate the average uptake per ON-BC (`avg_upc`)
 
-`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed for all of these objects. This will be divided by the total number of ON-BCs to produce `avg_upc`
+`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed across all of these objects. The number of segmentation objects is arbitrary and is determined by the machine learning segmentation algorithm. This summed value will be divided by the total number of ON-BCs to produce `avg_upc`
 
 - images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
 
