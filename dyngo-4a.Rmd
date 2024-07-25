@@ -48,7 +48,7 @@ For each individual experiment, there is a separate excel workbook of data gener
 
 Variable names are then cleaned with `janitor` and extraneous columns are excluded (can be retrieved for different analysis later)
 
-The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2)
+The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs Dyngo-4a) to samples by the name of the sample (i.e "s1.2")
 ```{r}
 #e1-449
 DMSO_imgs <- c("s2.1","s2.3") #removed s1.2
@@ -229,7 +229,7 @@ dyngo_t_test
 # Plotting
 
 ```{r, fig.height=7, fig.width=6}
-dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_ML_V2", condition_label = "Condition", add_stats = TRUE, dyngo_t_test)
+dyngo_plot <- uptake_plot(all_dyngo_exps, output_name = "all_dyngo_exps_ML_V2",condition_label = "", add_stats = TRUE, dyngo_t_test)
 dyngo_plot
 ```
 Table of the plotted values

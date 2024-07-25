@@ -1,5 +1,5 @@
 ---
-title: "pitstop2 2"
+title: "pitstop2"
 output: html_document
 date: "2024-07-16"
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In Melanoma-Associated Retinopathy (MAR), retinal rod bipolar cells internalize anti-TRPM1 autoantibodies, bringing them into their cytosol using an unknown mechanism. This experiment serves to elucidate the cellular mechanisms contributing to antibody uptake by pharmacologically inhibiting various endocytic pathways and observing the consequences on antibody uptake as seen in an *ex vivo* split mouse retina.
 
-In this project, the effect of inhibiting dynamin-dependent endocytosis is observed by treating split retinas with pitstop2-4a. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of pitstop2 4a. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
+In this project, the effect of inhibiting clathrin mediated endocytosis is observed by treating split retinas with Pitstop 2. Briefly, the photoreceptors were removed from freshly isolated mouse retinas which were then incubated with an antibody for 1hr in the presence or absence of Pitstop 2. The retinas were washed, then incubated with a viability dye to track cell death. Afterward, retinas were fixed, and the localization of the internalized antibodies was revealed by incubating the tissue with a labeled secondary antibody that targets the internalized antibody. 
 
 Microscopy data were collected on a Leica SPX8 Confocal microscope. Images were processed in Arivis software using a custom pipeline that segments true uptake signal from internalized antibody based on a machine learning algorithm trained on these data. This segmentation is trained to ignore the super bright signal produced from dead cells and staining artifacts. ON-BCs are counted using the Cellpose algorithm, and average uptake is calculated by summing the uptake signal and dividing by the number of ON-BCs. 
 
@@ -44,28 +44,192 @@ For each individual experiment, there is a separate excel workbook of data gener
 
 Variable names are then cleaned with `janitor` and extraneous columns are excluded (can be retrieved for different analysis later)
 
-The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs pitstop2-4a) to samples by the name of the sample (i.e "s1.2)
+The `read_n_clean` function also implements the `condition_select` method, which allows the user to assign treatment conditions (i.e DMSO vs pitstop2) to samples by the name of the sample (i.e "s1.2")
 ```{r}
-#e1-449
-DMSO_imgs <- c("s2.1","s2.3") #removed s1.2
-pitstop2_imgs <- c("s3.1", "s3.2", "s3.3", "s4.1", "s4.3")
-e449 <- read_n_clean(folder_path = "data/e1-449", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
+#e1-469
+DMSO_imgs <- c("s1.1","s1.3","s2.1","s2.3")
+pitstop2_imgs <- c("s3.1","s3.3","s4.1","s4.3")
+e469 <- read_n_clean(folder_path = "data/e1-469", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
 
-#e1-455
-DMSO_imgs <- c("s1.1", "s1.3", "s2.1")
-pitstop2_imgs <- c("s3.2", "s4.1")
-e455 <- read_n_clean(folder_path = "data/e1-455", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
-
-#e1-456
-DMSO_imgs <- c("s2.1", "s2.2", "s2.3") #potentially remove s2.1
+#e1-475
+DMSO_imgs <- c("s1.3")
 pitstop2_imgs <- c("s3.3")
-e456 <- read_n_clean(folder_path = "data/e1-456", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
+e475 <- read_n_clean(folder_path = "data/e1-475", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
 
-#e1-458
-DMSO_imgs <- c("none") #only pitstop2 images for this data set
-pitstop2_imgs <- c("s3.2")
-e458 <- read_n_clean(folder_path = "data/e1-458", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
+#e1-478
+DMSO_imgs <- c("s2.1", "s2.2", "s2.3")
+pitstop2_imgs <- c("s3.1", "s3.3", "s4.2")
+e478 <- read_n_clean(folder_path = "data/e1-478", cond1_vec = DMSO_imgs, cond2_vec = pitstop2_imgs, cond1_title = "DMSO", cond2_title = "pitstop2")
 
 #place all experiment dataframes into a list for batch processing
-all_pitstop2_exps <- list("e449" = e449, "e455" = e455, "e456" = e456, "e458" = e458)
+all_pitstop2_exps <- list("e469" = e469, "e475" = e475, "e478" = e478)
+```
+
+# Data Analysis
+
+The current analysis pipeline produces two object types: "Segment ON-BCs" and "Segment Uptake." The number of Segment ON-BC objects equals the number of ON-BCs counted in the image. The number of Segment Uptake objects is arbitrary, but represent the segmentation objects identified by the ML model. To get the total uptake signal, the "sum_intensities_3" value is summed for every one of the Segment Uptake objects. The value "avergae uptake per cell" is calculated by dividing this sum by the average number of bipolar cells counted across all images.
+
+
+<p style="text-align: center;">s1.2<span style="color:blue">**-1**</span></p>
+
+Begin by identifying all images that come from the same piece of tissue, using a Regex to identify this based on the sample name
+```{r}
+#regex string that will extract everything between the 's' and the '-' in the sample name
+sample_string <- "s.*?.?(?=-)"
+
+#add new variable "tissue" that uses the regex to match all images from the same piece of tissue
+all_pitstop2_exps <- lapply(all_pitstop2_exps, function(x){mutate(x, tissue = str_extract(x$image_set, pattern = sample_string),.after = 1)})
+all_pitstop2_exps[1]
+```
+
+## Calculate the average uptake per ON-BC (`avg_upc`)
+
+`sum_intensities_3` represents the amount of 488-uptake signal present in a given Segment Uptake object. To calculate the total uptake for a given image, sum_intensities_3 must be summed across all of these objects. The number of segmentation objects is arbitrary and is determined by the machine learning segmentation algorithm. This summed value will be divided by the total number of ON-BCs to produce `avg_upc`
+
+- images with low Td-tomato signal intensity are not being counted properly. To balance inacurate counts, the average number of ON-BCs across the entire data set will be calculated after merging all data frames into one
+
+- total number of ON-BCs can be found by counting rows with ON-BCs in the name
+
+```{r}
+all_pitstop2_exps <- lapply(all_pitstop2_exps, avg_uptake)
+```
+
+Merge all dataframes in list into one dataframe
+```{r}
+all_pitstop2_exps <- bind_rows(all_pitstop2_exps, .id = "exp") %>% 
+  mutate(exp = as.factor(exp))
+
+#averaging the number of ON-BCs across all images in data set to account for dim Td tom signal that caused miscount
+all_pitstop2_exps["avg_on_bc_count"] <- mean(all_pitstop2_exps$on_bc_count) 
+
+#average uptake per cell, sum intensity for a single image over the avg ON-BC count for all experiments
+all_pitstop2_exps["avg_upc"] <- all_pitstop2_exps$sum_intensities/all_pitstop2_exps$avg_on_bc_count 
+```
+
+
+## Averaging across tissue
+Next, group by `exp` and  `tissue`, then average `avg_upc`
+```{r}
+all_pitstop2_exps <- all_pitstop2_exps %>% 
+    group_by(exp, tissue) %>% #first compute avg grouping by tissue (contains multiple images)
+    mutate(tissue_avg = mean(avg_upc)) %>% 
+    ungroup()
+```
+
+Checking to see that each image has a distinct average and each tissue has a distinct average. Looks good
+```{r}
+all_pitstop2_exps %>%
+  group_by(image_set, exp, tissue, condition, sum_intensities, avg_on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  arrange(exp) %>% 
+  kbl() %>% 
+  kable_paper()
+```
+
+
+When plotting, each piece of tissue (tissue average) will be a point. The bar will be the *condition average* and will be made after merging all experiments into a single dataframe. 
+```{r}
+all_pitstop2_exps <- all_pitstop2_exps %>% 
+    group_by(condition) %>% 
+    mutate(condition_avg = mean(unique(tissue_avg)),
+           condition_sd = sd(tissue_avg)) %>% 
+    ungroup()
+```
+
+## Validation and testing
+Verifying avg_upc calculation
+```{r}
+all_pitstop2_exps %>% 
+  group_by(image_set, tissue,exp, condition,sum_intensities, on_bc_count, avg_upc, tissue_avg) %>% 
+  summarise() %>% 
+  filter(exp == "e469") %>% 
+  ggplot()+
+  geom_col(aes(x = image_set, y = avg_upc))+
+  geom_point(aes(x = image_set, y = tissue_avg), color = "orange")+
+  #geom_col(aes(x = image_set, y = on_bc_count/on_bc_count[1]), fill = "darkgreen")
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+## Shapiro-Wilk Normality test
+
+- try performing on every individual data point: `mean_intensities_3`
+- try performing on just what goes into the plot: `tissue_avg`
+
+Histogram on points to be plotted
+```{r}
+all_pitstop2_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>%
+  hist()
+```
+Shapiro-Wilk on points to be plotted
+```{r}
+shapiro_result <- all_pitstop2_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% 
+  pull(tissue_avg) %>% 
+  shapiro.test()
+
+if(shapiro_result$p.value > 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are normally distributed"))
+}
+if(shapiro_result$p.value < 0.05){
+  print(c("The p-value of the Shapiro-Wilks test = ", as.character(shapiro_result$p.value), ". For alpha = 0.05, the data are NOT normally distributed"))
+}
+
+```
+
+## Un-paired T-test
+
+Performing a Welch's t-test since this does not assume the variance in the two groups is the same.
+```{r}
+pitstop2_t_test <- all_pitstop2_exps %>% 
+  group_by(tissue, condition, condition_avg, tissue_avg, condition_sd, exp) %>%
+  summarise() %>% #the group by and summarize lines are to filter to only the data that will be plotted and was tested in the normality test
+  ungroup() %>% 
+  t_test(tissue_avg ~ condition) %>% 
+  add_significance() %>% 
+  add_xy_position(x = "condition")
+
+pitstop2_t_test
+```
+
+
+# Plotting
+
+```{r, fig.height=7, fig.width=6}
+pitstop2_plot <- uptake_plot(all_pitstop2_exps, output_name = "all_pitstop2_exps_ML_V2",condition_label = "", add_stats = TRUE, pitstop2_t_test)
+pitstop2_plot 
+```
+Table of the plotted values
+```{r}
+all_pitstop2_exps %>% 
+  group_by(image_set,sum_intensities, tissue, exp, condition, condition_avg, tissue_avg) %>%
+  summarise()
+  # kbl() %>% 
+  # kable_paper()
+```
+
+Sum intensities by image
+```{r}
+all_pitstop2_exps %>% 
+  ggplot(aes(x = image_set, y = avg_upc))+
+  geom_col()+
+  facet_wrap(vars(condition), scales = "free_x")+
+  theme_classic()+
+  scale_y_continuous(expand = expansion(c(0,0.1)))+
+  labs(x = "Image")+
+  theme(axis.text = element_text(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+```
+
+Analyzing the change in `avg_upc` across experiments
+```{r}
+all_pitstop2_exps %>% 
+  ggplot()+
+  geom_point(aes(x = exp, y = avg_upc, color = condition), alpha = 0.7)+
+  theme_classic()
 ```
